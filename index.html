@@ -194,7 +194,7 @@
 
   <div id="main-view">
     <div class="top-bar">
-      <button class="logout-btn" id="logout-btn">ログアウト</button>
+      <button class="logout-btn" id="logout-btn" onclick="handleLogout()">ログアウト</button>
     </div>
     <div class="card post-form">
       <textarea id="content-input" placeholder="今日のひとりごと..."></textarea>
@@ -218,7 +218,6 @@
   const postBtn = document.getElementById("post-btn");
   const postError = document.getElementById("post-error");
   const postsList = document.getElementById("posts-list");
-  const logoutBtn = document.getElementById("logout-btn");
 
   const getPassword = () => localStorage.getItem(STORAGE_KEY) || "";
   const setPassword = (pw) => localStorage.setItem(STORAGE_KEY, pw);
@@ -333,6 +332,11 @@
     });
     await loadPosts();
   });
+
+  window.handleLogout = () => {
+    clearPassword();
+    showLogin();
+  };
 
   const init = () => {
     const pw = getPassword();
