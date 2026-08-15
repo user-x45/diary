@@ -217,6 +217,105 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .filter-bar input[type="text"] {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .filter-bar input[type="date"] {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  .filter-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--sub-text);
+    padding: 10px 14px;
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .post-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .edit-btn {
+    background: transparent;
+    color: var(--sub-text);
+    padding: 2px 8px;
+    margin-top: 0;
+    font-size: 12px;
+  }
+
+  .edit-btn:hover {
+    color: var(--accent);
+  }
+
+  .edit-textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: none;
+    min-height: 80px;
+  }
+
+  .edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .edit-save-btn {
+    padding: 6px 14px;
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .edit-cancel-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--sub-text);
+    padding: 6px 14px;
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .edited-tag {
+    color: var(--sub-text);
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  .login-btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
 </style>
 </head>
 <body>
@@ -226,7 +325,12 @@
   <div id="login-view">
     <div class="card">
       <input type="password" id="password-input" placeholder="パスワード">
-      <button id="login-btn">入る</button>
+      <button id="login-btn">
+        <span class="login-btn-content">
+          <span class="spinner" id="login-spinner"></span>
+          <span id="login-btn-label">入る</span>
+        </span>
+      </button>
       <div class="error" id="login-error">パスワードが違います</div>
     </div>
   </div>
@@ -245,6 +349,11 @@
       </button>
       <div class="error" id="post-error">投稿に失敗しました</div>
     </div>
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="検索...">
+      <input type="date" id="date-input">
+      <button class="filter-clear" id="filter-clear-btn">クリア</button>
+    </div>
     <div class="posts" id="posts-list"></div>
   </div>
 </div>
@@ -257,6 +366,8 @@
   const mainView = document.getElementById("main-view");
   const passwordInput = document.getElementById("password-input");
   const loginBtn = document.getElementById("login-btn");
+  const loginSpinner = document.getElementById("login-spinner");
+  const loginBtnLabel = document.getElementById("login-btn-label");
   const loginError = document.getElementById("login-error");
   const contentInput = document.getElementById("content-input");
   const postBtn = document.getElementById("post-btn");
@@ -264,8 +375,12 @@
   const postBtnLabel = document.getElementById("post-btn-label");
   const postError = document.getElementById("post-error");
   const postsList = document.getElementById("posts-list");
+  const searchInput = document.getElementById("search-input");
+  const dateInput = document.getElementById("date-input");
+  const filterClearBtn = document.getElementById("filter-clear-btn");
 
   let posts = [];
+  let editingId = null;
 
   const getPassword = () => localStorage.getItem(STORAGE_KEY) || "";
   const setPassword = (pw) => localStorage.setItem(STORAGE_KEY, pw);
@@ -279,23 +394,62 @@
     });
   };
 
+  const toDateInputValue = (ts) => {
+    const d = new Date(ts);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getFilteredPosts = () => {
+    const keyword = searchInput.value.trim().toLowerCase();
+    const dateFilter = dateInput.value;
+    return posts.filter((post) => {
+      if (keyword && !post.content.toLowerCase().includes(keyword)) return false;
+      if (dateFilter && toDateInputValue(post.createdAt) !== dateFilter) return false;
+      return true;
+    });
+  };
+
   const renderPosts = () => {
+    const filtered = getFilteredPosts();
     postsList.innerHTML = "";
     if (posts.length === 0) {
       postsList.innerHTML = '<div class="empty">まだ投稿がありません</div>';
       return;
     }
-    for (const post of posts) {
+    if (filtered.length === 0) {
+      postsList.innerHTML = '<div class="empty">該当する投稿がありません</div>';
+      return;
+    }
+    for (const post of filtered) {
       const el = document.createElement("div");
       el.className = "post";
-      el.innerHTML = `
-        <div class="post-content"></div>
-        <div class="post-meta">
-          <span class="post-time">${formatTime(post.createdAt)}</span>
-          <button class="delete-btn" data-id="${post.id}">削除</button>
-        </div>
-      `;
-      el.querySelector(".post-content").textContent = post.content;
+      if (editingId === post.id) {
+        el.innerHTML = `
+          <textarea class="edit-textarea" data-edit-id="${post.id}"></textarea>
+          <div class="edit-actions">
+            <button class="edit-save-btn" data-save-id="${post.id}">保存</button>
+            <button class="edit-cancel-btn" data-cancel-id="${post.id}">キャンセル</button>
+          </div>
+          <div class="error" id="edit-error-${post.id}" style="display:none;">更新に失敗しました</div>
+        `;
+        el.querySelector("textarea").value = post.content;
+      } else {
+        const editedTag = post.updatedAt ? '<span class="edited-tag">(編集済み)</span>' : "";
+        el.innerHTML = `
+          <div class="post-content"></div>
+          <div class="post-meta">
+            <span class="post-time">${formatTime(post.createdAt)}${editedTag}</span>
+            <div class="post-actions">
+              <button class="edit-btn" data-id="${post.id}">編集</button>
+              <button class="delete-btn" data-id="${post.id}">削除</button>
+            </div>
+          </div>
+        `;
+        el.querySelector(".post-content").textContent = post.content;
+      }
       postsList.appendChild(el);
     }
   };
@@ -334,15 +488,24 @@
   const tryLogin = async () => {
     const pw = passwordInput.value;
     if (!pw) return;
-    const res = await fetch(`${API_BASE}/api/posts`, {
-      headers: { "X-Password": pw }
-    });
-    if (res.ok) {
-      setPassword(pw);
-      loginError.style.display = "none";
-      await showMain();
-    } else {
-      loginError.style.display = "block";
+    loginBtn.disabled = true;
+    loginSpinner.classList.add("active");
+    loginBtnLabel.textContent = "確認中...";
+    loginError.style.display = "none";
+    try {
+      const res = await fetch(`${API_BASE}/api/posts`, {
+        headers: { "X-Password": pw }
+      });
+      if (res.ok) {
+        setPassword(pw);
+        await showMain();
+      } else {
+        loginError.style.display = "block";
+      }
+    } finally {
+      loginBtn.disabled = false;
+      loginSpinner.classList.remove("active");
+      loginBtnLabel.textContent = "入る";
     }
   };
 
@@ -382,17 +545,69 @@
   });
 
   postsList.addEventListener("click", async (e) => {
-    if (!e.target.classList.contains("delete-btn")) return;
-    const id = e.target.dataset.id;
-    if (!confirm("削除しますか？")) return;
-    const res = await fetch(`${API_BASE}/api/posts/${id}`, {
-      method: "DELETE",
-      headers: { "X-Password": getPassword() }
-    });
-    if (res.ok) {
-      posts = posts.filter((p) => p.id !== id);
+    const editId = e.target.dataset.id;
+    const saveId = e.target.dataset.saveId;
+    const cancelId = e.target.dataset.cancelId;
+    const deleteId = e.target.classList.contains("delete-btn") ? e.target.dataset.id : null;
+
+    if (e.target.classList.contains("edit-btn")) {
+      editingId = editId;
       renderPosts();
+      return;
     }
+
+    if (cancelId) {
+      editingId = null;
+      renderPosts();
+      return;
+    }
+
+    if (saveId) {
+      const textarea = postsList.querySelector(`textarea[data-edit-id="${saveId}"]`);
+      const content = textarea.value.trim();
+      const errorEl = document.getElementById(`edit-error-${saveId}`);
+      if (!content) return;
+      e.target.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/api/posts/${saveId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Password": getPassword()
+          },
+          body: JSON.stringify({ content })
+        });
+        if (!res.ok) throw new Error("failed");
+        const updated = await res.json();
+        posts = posts.map((p) => (p.id === saveId ? updated : p));
+        editingId = null;
+        renderPosts();
+      } catch {
+        if (errorEl) errorEl.style.display = "block";
+        e.target.disabled = false;
+      }
+      return;
+    }
+
+    if (deleteId) {
+      if (!confirm("削除しますか？")) return;
+      const res = await fetch(`${API_BASE}/api/posts/${deleteId}`, {
+        method: "DELETE",
+        headers: { "X-Password": getPassword() }
+      });
+      if (res.ok) {
+        posts = posts.filter((p) => p.id !== deleteId);
+        renderPosts();
+      }
+    }
+  });
+
+  searchInput.addEventListener("input", renderPosts);
+  dateInput.addEventListener("change", renderPosts);
+  filterClearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    dateInput.value = "";
+    renderPosts();
   });
 
   window.handleLogout = () => {
