@@ -220,38 +220,85 @@
 
   .filter-bar {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 10px;
     margin-bottom: 16px;
+  }
+
+  .search-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .search-wrap svg {
+    flex-shrink: 0;
+    color: var(--sub-text);
   }
 
   .filter-bar input[type="text"] {
     flex: 1;
-    border: 1px solid var(--border);
-    background: var(--card-bg);
+    min-width: 0;
+    border: none;
+    background: transparent;
     color: var(--text);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
+    padding: 10px 0;
+    font-size: 16px;
     font-family: inherit;
   }
 
+  .filter-bar input[type="text"]:focus {
+    outline: none;
+  }
+
+  .filter-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
   .filter-bar input[type="date"] {
-    border: 1px solid var(--border);
-    background: var(--card-bg);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
+    border: none;
+    background: transparent;
+    color: var(--sub-text);
+    padding: 10px 2px;
+    font-size: 16px;
     font-family: inherit;
+    max-width: 120px;
+  }
+
+  .filter-bar input[type="date"]:focus {
+    outline: none;
+    color: var(--text);
   }
 
   .filter-clear {
     background: transparent;
-    border: 1px solid var(--border);
+    border: none;
     color: var(--sub-text);
-    padding: 10px 14px;
+    padding: 6px;
     margin-top: 0;
-    font-size: 13px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .filter-clear.active {
+    display: inline-flex;
+  }
+
+  .filter-clear:hover {
+    color: var(--danger);
+    background: var(--bg);
   }
 
   .post-actions {
@@ -350,9 +397,15 @@
       <div class="error" id="post-error">投稿に失敗しました</div>
     </div>
     <div class="filter-bar">
-      <input type="text" id="search-input" placeholder="検索...">
+      <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="search-input" placeholder="検索">
+      </div>
+      <div class="filter-divider"></div>
       <input type="date" id="date-input">
-      <button class="filter-clear" id="filter-clear-btn">クリア</button>
+      <button class="filter-clear" id="filter-clear-btn" title="クリア">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="posts" id="posts-list"></div>
   </div>
@@ -602,11 +655,23 @@
     }
   });
 
-  searchInput.addEventListener("input", renderPosts);
-  dateInput.addEventListener("change", renderPosts);
+  const updateFilterClearVisibility = () => {
+    const active = searchInput.value.trim() !== "" || dateInput.value !== "";
+    filterClearBtn.classList.toggle("active", active);
+  };
+
+  searchInput.addEventListener("input", () => {
+    updateFilterClearVisibility();
+    renderPosts();
+  });
+  dateInput.addEventListener("change", () => {
+    updateFilterClearVisibility();
+    renderPosts();
+  });
   filterClearBtn.addEventListener("click", () => {
     searchInput.value = "";
     dateInput.value = "";
+    updateFilterClearVisibility();
     renderPosts();
   });
 
