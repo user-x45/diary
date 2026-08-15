@@ -295,8 +295,9 @@
 
   .date-input-hidden {
     position: absolute;
-    width: 0;
-    height: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
     opacity: 0;
     pointer-events: none;
   }
@@ -435,15 +436,15 @@
         <i class="fa-solid fa-magnifying-glass"></i>
         <input type="text" id="search-input" placeholder="検索">
       </div>
+      <button class="filter-clear" id="filter-clear-btn" title="クリア">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
       <div class="filter-divider"></div>
       <button class="date-trigger" id="date-trigger-btn" title="日付で絞り込み">
         <i class="fa-regular fa-calendar"></i>
         <span id="date-trigger-label"></span>
       </button>
       <input type="date" id="date-input" class="date-input-hidden">
-      <button class="filter-clear" id="filter-clear-btn" title="クリア">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
     </div>
     <div class="posts" id="posts-list"></div>
   </div>
