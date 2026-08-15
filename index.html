@@ -178,6 +178,45 @@
     padding: 40px 0;
     font-size: 14px;
   }
+
+  .loading {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+  }
+
+  .loading .spinner {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-width: 3px;
+    border-color: var(--border);
+    border-top-color: var(--accent);
+  }
+
+  .post-btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .spinner.active {
+    display: inline-block;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 </style>
 </head>
 <body>
@@ -198,7 +237,12 @@
     </div>
     <div class="card post-form">
       <textarea id="content-input" placeholder="今日のひとりごと..."></textarea>
-      <button id="post-btn">投稿する</button>
+      <button id="post-btn">
+        <span class="post-btn-content">
+          <span class="spinner" id="post-spinner"></span>
+          <span id="post-btn-label">投稿する</span>
+        </span>
+      </button>
       <div class="error" id="post-error">投稿に失敗しました</div>
     </div>
     <div class="posts" id="posts-list"></div>
@@ -216,8 +260,12 @@
   const loginError = document.getElementById("login-error");
   const contentInput = document.getElementById("content-input");
   const postBtn = document.getElementById("post-btn");
+  const postSpinner = document.getElementById("post-spinner");
+  const postBtnLabel = document.getElementById("post-btn-label");
   const postError = document.getElementById("post-error");
   const postsList = document.getElementById("posts-list");
+
+  let posts = [];
 
   const getPassword = () => localStorage.getItem(STORAGE_KEY) || "";
   const setPassword = (pw) => localStorage.setItem(STORAGE_KEY, pw);
@@ -231,7 +279,7 @@
     });
   };
 
-  const renderPosts = (posts) => {
+  const renderPosts = () => {
     postsList.innerHTML = "";
     if (posts.length === 0) {
       postsList.innerHTML = '<div class="empty">まだ投稿がありません</div>';
@@ -252,7 +300,12 @@
     }
   };
 
+  const showPostsLoading = () => {
+    postsList.innerHTML = '<div class="loading"><span class="spinner active"></span></div>';
+  };
+
   const loadPosts = async () => {
+    showPostsLoading();
     const res = await fetch(`${API_BASE}/api/posts`, {
       headers: { "X-Password": getPassword() }
     });
@@ -261,8 +314,8 @@
       showLogin();
       return;
     }
-    const posts = await res.json();
-    renderPosts(posts);
+    posts = await res.json();
+    renderPosts();
   };
 
   const showMain = async () => {
@@ -302,6 +355,8 @@
     const content = contentInput.value.trim();
     if (!content) return;
     postBtn.disabled = true;
+    postSpinner.classList.add("active");
+    postBtnLabel.textContent = "投稿中...";
     postError.style.display = "none";
     try {
       const res = await fetch(`${API_BASE}/api/posts`, {
@@ -313,12 +368,16 @@
         body: JSON.stringify({ content })
       });
       if (!res.ok) throw new Error("failed");
+      const newPost = await res.json();
+      posts.unshift(newPost);
+      renderPosts();
       contentInput.value = "";
-      await loadPosts();
     } catch {
       postError.style.display = "block";
     } finally {
       postBtn.disabled = false;
+      postSpinner.classList.remove("active");
+      postBtnLabel.textContent = "投稿する";
     }
   });
 
@@ -326,11 +385,14 @@
     if (!e.target.classList.contains("delete-btn")) return;
     const id = e.target.dataset.id;
     if (!confirm("削除しますか？")) return;
-    await fetch(`${API_BASE}/api/posts/${id}`, {
+    const res = await fetch(`${API_BASE}/api/posts/${id}`, {
       method: "DELETE",
       headers: { "X-Password": getPassword() }
     });
-    await loadPosts();
+    if (res.ok) {
+      posts = posts.filter((p) => p.id !== id);
+      renderPosts();
+    }
   });
 
   window.handleLogout = () => {
