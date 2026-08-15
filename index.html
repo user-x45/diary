@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ひとりごと</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   :root {
     --bg: #f5f5f3;
@@ -186,12 +187,8 @@
   }
 
   .loading .spinner {
-    display: inline-block;
-    width: 22px;
-    height: 22px;
-    border-width: 3px;
-    border-color: var(--border);
-    border-top-color: var(--accent);
+    font-size: 22px;
+    color: var(--accent);
   }
 
   .post-btn-content {
@@ -201,21 +198,11 @@
   }
 
   .spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
     display: none;
   }
 
   .spinner.active {
     display: inline-block;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 
   .filter-bar {
@@ -237,9 +224,10 @@
     min-width: 0;
   }
 
-  .search-wrap svg {
+  .search-wrap i {
     flex-shrink: 0;
     color: var(--sub-text);
+    font-size: 14px;
   }
 
   .filter-bar input[type="text"] {
@@ -274,6 +262,45 @@
     max-width: 120px;
   }
 
+  .filter-bar input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+
+  .date-trigger {
+    background: transparent;
+    border: none;
+    color: var(--sub-text);
+    padding: 6px 8px;
+    margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 15px;
+  }
+
+  .date-trigger:hover {
+    color: var(--accent);
+  }
+
+  .date-trigger.active {
+    color: var(--accent);
+  }
+
+  #date-trigger-label {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .date-input-hidden {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .filter-bar input[type="date"]:focus {
     outline: none;
     color: var(--text);
@@ -304,6 +331,12 @@
   .post-actions {
     display: flex;
     gap: 6px;
+  }
+
+  .edit-btn, .delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   .edit-btn {
@@ -374,7 +407,7 @@
       <input type="password" id="password-input" placeholder="パスワード">
       <button id="login-btn">
         <span class="login-btn-content">
-          <span class="spinner" id="login-spinner"></span>
+          <i class="fa-solid fa-spinner fa-spin spinner" id="login-spinner"></i>
           <span id="login-btn-label">入る</span>
         </span>
       </button>
@@ -384,13 +417,14 @@
 
   <div id="main-view">
     <div class="top-bar">
-      <button class="logout-btn" id="logout-btn" onclick="handleLogout()">ログアウト</button>
+      <button class="logout-btn" id="logout-btn" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> ログアウト</button>
     </div>
     <div class="card post-form">
       <textarea id="content-input" placeholder="今日のひとりごと..."></textarea>
       <button id="post-btn">
         <span class="post-btn-content">
-          <span class="spinner" id="post-spinner"></span>
+          <i class="fa-solid fa-spinner fa-spin spinner" id="post-spinner"></i>
+          <i class="fa-solid fa-paper-plane" id="post-btn-icon"></i>
           <span id="post-btn-label">投稿する</span>
         </span>
       </button>
@@ -398,13 +432,17 @@
     </div>
     <div class="filter-bar">
       <div class="search-wrap">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <i class="fa-solid fa-magnifying-glass"></i>
         <input type="text" id="search-input" placeholder="検索">
       </div>
       <div class="filter-divider"></div>
-      <input type="date" id="date-input">
+      <button class="date-trigger" id="date-trigger-btn" title="日付で絞り込み">
+        <i class="fa-regular fa-calendar"></i>
+        <span id="date-trigger-label"></span>
+      </button>
+      <input type="date" id="date-input" class="date-input-hidden">
       <button class="filter-clear" id="filter-clear-btn" title="クリア">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
     <div class="posts" id="posts-list"></div>
@@ -430,7 +468,9 @@
   const postsList = document.getElementById("posts-list");
   const searchInput = document.getElementById("search-input");
   const dateInput = document.getElementById("date-input");
+  const dateTriggerBtn = document.getElementById("date-trigger-btn");
   const filterClearBtn = document.getElementById("filter-clear-btn");
+  const postBtnIcon = document.getElementById("post-btn-icon");
 
   let posts = [];
   let editingId = null;
@@ -496,8 +536,8 @@
           <div class="post-meta">
             <span class="post-time">${formatTime(post.createdAt)}${editedTag}</span>
             <div class="post-actions">
-              <button class="edit-btn" data-id="${post.id}">編集</button>
-              <button class="delete-btn" data-id="${post.id}">削除</button>
+              <button class="edit-btn" data-id="${post.id}"><i class="fa-solid fa-pen"></i> 編集</button>
+              <button class="delete-btn" data-id="${post.id}"><i class="fa-solid fa-trash"></i> 削除</button>
             </div>
           </div>
         `;
@@ -508,7 +548,7 @@
   };
 
   const showPostsLoading = () => {
-    postsList.innerHTML = '<div class="loading"><span class="spinner active"></span></div>';
+    postsList.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin spinner active"></i></div>';
   };
 
   const loadPosts = async () => {
@@ -572,6 +612,7 @@
     if (!content) return;
     postBtn.disabled = true;
     postSpinner.classList.add("active");
+    postBtnIcon.style.display = "none";
     postBtnLabel.textContent = "投稿中...";
     postError.style.display = "none";
     try {
@@ -593,34 +634,36 @@
     } finally {
       postBtn.disabled = false;
       postSpinner.classList.remove("active");
+      postBtnIcon.style.display = "inline-block";
       postBtnLabel.textContent = "投稿する";
     }
   });
 
   postsList.addEventListener("click", async (e) => {
-    const editId = e.target.dataset.id;
-    const saveId = e.target.dataset.saveId;
-    const cancelId = e.target.dataset.cancelId;
-    const deleteId = e.target.classList.contains("delete-btn") ? e.target.dataset.id : null;
+    const editBtn = e.target.closest(".edit-btn");
+    const deleteBtn = e.target.closest(".delete-btn");
+    const saveBtn = e.target.closest(".edit-save-btn");
+    const cancelBtn = e.target.closest(".edit-cancel-btn");
 
-    if (e.target.classList.contains("edit-btn")) {
-      editingId = editId;
+    if (editBtn) {
+      editingId = editBtn.dataset.id;
       renderPosts();
       return;
     }
 
-    if (cancelId) {
+    if (cancelBtn) {
       editingId = null;
       renderPosts();
       return;
     }
 
-    if (saveId) {
+    if (saveBtn) {
+      const saveId = saveBtn.dataset.saveId;
       const textarea = postsList.querySelector(`textarea[data-edit-id="${saveId}"]`);
       const content = textarea.value.trim();
       const errorEl = document.getElementById(`edit-error-${saveId}`);
       if (!content) return;
-      e.target.disabled = true;
+      saveBtn.disabled = true;
       try {
         const res = await fetch(`${API_BASE}/api/posts/${saveId}`, {
           method: "PUT",
@@ -637,12 +680,13 @@
         renderPosts();
       } catch {
         if (errorEl) errorEl.style.display = "block";
-        e.target.disabled = false;
+        saveBtn.disabled = false;
       }
       return;
     }
 
-    if (deleteId) {
+    if (deleteBtn) {
+      const deleteId = deleteBtn.dataset.id;
       if (!confirm("削除しますか？")) return;
       const res = await fetch(`${API_BASE}/api/posts/${deleteId}`, {
         method: "DELETE",
@@ -655,10 +699,27 @@
     }
   });
 
+  const dateTriggerLabel = document.getElementById("date-trigger-label");
+
   const updateFilterClearVisibility = () => {
     const active = searchInput.value.trim() !== "" || dateInput.value !== "";
     filterClearBtn.classList.toggle("active", active);
+    dateTriggerBtn.classList.toggle("active", dateInput.value !== "");
+    if (dateInput.value) {
+      const [y, m, d] = dateInput.value.split("-");
+      dateTriggerLabel.textContent = `${m}/${d}`;
+    } else {
+      dateTriggerLabel.textContent = "";
+    }
   };
+
+  dateTriggerBtn.addEventListener("click", () => {
+    if (dateInput.showPicker) {
+      dateInput.showPicker();
+    } else {
+      dateInput.focus();
+    }
+  });
 
   searchInput.addEventListener("input", () => {
     updateFilterClearVisibility();
