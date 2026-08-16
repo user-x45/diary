@@ -445,7 +445,7 @@
     color: var(--text);
     border-radius: 8px;
     padding: 12px;
-    font-size: 15px;
+    font-size: 16px;
     font-family: inherit;
     resize: none;
     min-height: 80px;
@@ -495,7 +495,8 @@
       <button id="login-btn">
         <span class="login-btn-content">
           <span class="spinner" id="login-spinner"></span>
-          <span id="login-btn-label">入る</span>
+          <i class="fa-solid fa-right-to-bracket" id="login-btn-icon"></i>
+          <span id="login-btn-label">ログイン</span>
         </span>
       </button>
       <div class="error" id="login-error">パスワードが違います</div>
@@ -557,6 +558,7 @@
   const passwordInput = document.getElementById("password-input");
   const loginBtn = document.getElementById("login-btn");
   const loginSpinner = document.getElementById("login-spinner");
+  const loginBtnIcon = document.getElementById("login-btn-icon");
   const loginBtnLabel = document.getElementById("login-btn-label");
   const loginError = document.getElementById("login-error");
   const contentInput = document.getElementById("content-input");
@@ -689,6 +691,7 @@
     if (!pw) return;
     loginBtn.disabled = true;
     loginSpinner.classList.add("active");
+    loginBtnIcon.style.display = "none";
     loginBtnLabel.textContent = "確認中...";
     loginError.style.display = "none";
     try {
@@ -704,7 +707,8 @@
     } finally {
       loginBtn.disabled = false;
       loginSpinner.classList.remove("active");
-      loginBtnLabel.textContent = "入る";
+      loginBtnIcon.style.display = "inline-block";
+      loginBtnLabel.textContent = "ログイン";
     }
   };
 
